@@ -99,28 +99,61 @@ def scan(
         "-s",
         help="Path to OpenAPI spec (overrides config)",
     ),
+    output: str = typer.Option(
+        "./reports",
+        "--output",
+        "-o",
+        help="Directory to save the security report",
+    ),
+    format: str = typer.Option(
+        "html",
+        "--format",
+        "-f",
+        help="Format of the report (html, markdown, json, sarif)",
+    ),
     fail_on_critical: bool = typer.Option(
         False,
         "--fail-on-critical",
         help="Exit with code 1 if critical vulnerabilities found",
     ),
+    demo: bool = typer.Option(
+        False,
+        "--demo",
+        help="Run scan against the demo vulnerable API",
+    ),
 ):
     """Scan an API for security vulnerabilities."""
     console.print(Panel(ASCII_CAT, title="🐱 Chaos Kitten", border_style="magenta"))
     console.print()
+
+    if demo:
+        console.print("[bold cyan]🎮 Running in DEMO mode![/bold cyan]")
+        target = target or "http://localhost:5000"
+        spec = spec or "examples/sample_openapi.json"
+        console.print(f"🎯 Target: {target}")
+        console.print(f"📋 Spec: {spec}")
+        console.print()
+
+    # Check for API keys if using LLM providers
+    import os
+    if not os.getenv("ANTHROPIC_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+        console.print("[bold red]❌ I can't see![/bold red]")
+        console.print("I need an [bold]ANTHROPIC_API_KEY[/bold] or [bold]OPENAI_API_KEY[/bold] to plan my mischief.")
+        console.print("[dim]Please set one in your environment or .env file.[/dim]")
+        
+        if not demo:
+            raise typer.Exit(code=1)
+        else:
+            console.print("[yellow]⚠️  Proceeding anyway since we are in demo mode...[/yellow]")
     
     # TODO: Implement actual scanning logic
-    console.print("[yellow]⚠️  Scanning not yet implemented![/yellow]")
-    console.print("This is a placeholder for the MVP.")
+    console.print("[yellow]⚠️  Scanning logic is still under construction![/yellow]")
+    console.print(f"I was supposed to scan [bold]{target or 'the API'}[/bold]...")
+    console.print(f"And save the [bold]{format}[/bold] report to [bold]{output}[/bold].")
     console.print()
-    console.print("[dim]Coming soon:[/dim]")
-    console.print("  • OpenAPI parsing")
-    console.print("  • LLM-powered attack planning")
-    console.print("  • SQL injection detection")
-    console.print("  • XSS detection")
-    console.print("  • IDOR detection")
-    console.print("  • Beautiful HTML reports")
-
+    console.print("🐾 [italic]But for now, I'm just stretching my paws![/italic]")
+    console.print("[dim]The full agentic brain will be integrated soon.[/dim]")
+    console.print()
 
 @app.command()
 def meow():

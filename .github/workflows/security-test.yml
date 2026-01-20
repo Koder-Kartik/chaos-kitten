@@ -48,10 +48,12 @@ jobs:
       - name: 🐱 Run Chaos Kitten Scan
         id: scan
         run: |
+          # We use --demo for CI to test against our local demo API easily
+          # The --output and --format flags are now supported!
           chaos-kitten scan \
-            --config chaos-kitten.yaml \
-            --output ./reports \
+            --demo \
             --format sarif \
+            --output ./reports \
             --fail-on-critical
         env:
           API_TOKEN: ${{ secrets.API_TOKEN }}
