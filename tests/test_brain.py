@@ -219,6 +219,40 @@ class TestOpenAPIParser:
         assert "requestBody" in update_prod
         assert update_prod["requestBody"]["content"]["application/json"]["schema"]["properties"]["name"]["type"] == "string"
 
+    def test_swagger_formdata_normalization(self, tmp_path):
+        """Test Swagger 2.0 formData parameters normalize to requestBody."""
+        spec_content = {
+            "swagger": "2.0",
+            "info": {"title": "Upload API", "version": "1.0.0"},
+            "consumes": ["multipart/form-data"],
+            "paths": {
+                "/upload": {
+                    "post": {
+                        "operationId": "uploadFile",
+                        "parameters": [
+                            {"name": "file", "in": "formData", "required": True, "type": "file"},
+                            {"name": "description", "in": "formData", "required": False, "type": "string"}
+                        ],
+                        "responses": {"200": {"description": "OK"}}
+                    }
+                }
+            }
+        }
+        file_path = tmp_path / "swagger_formdata.json"
+        file_path.write_text(json.dumps(spec_content))
+
+        parser = OpenAPIParser(file_path)
+        endpoints = parser.get_endpoints()
+
+        assert len(endpoints) == 1
+        upload = endpoints[0]
+        assert "requestBody" in upload
+        assert "multipart/form-data" in upload["requestBody"]["content"]
+        schema = upload["requestBody"]["content"]["multipart/form-data"]["schema"]
+        assert schema["properties"]["file"]["type"] == "file"
+        assert schema["properties"]["description"]["type"] == "string"
+        assert "file" in schema["required"]
+
     def test_filter_endpoints_by_method(self, openapi_3_spec):
         """Test filtering endpoints by HTTP method."""
         parser = OpenAPIParser(openapi_3_spec)
@@ -231,11 +265,71 @@ class TestOpenAPIParser:
         get_eps_lower = parser.get_endpoints(methods=["get"])
         assert len(get_eps_lower) == 2
 
+    def test_filter_endpoints_by_tags(self, tmp_path):
+        """Test filtering endpoints by tags."""
+        spec_content = {
+            "openapi": "3.0.0",
+            "info": {"title": "Tagged API", "version": "1.0.0"},
+            "paths": {
+                "/public": {
+                    "get": {
+                        "operationId": "getPublic",
+                        "tags": ["public"],
+                        "responses": {"200": {"description": "OK"}}
+                    }
+                },
+                "/admin": {
+                    "get": {
+                        "operationId": "getAdmin",
+                        "tags": ["admin"],
+                        "responses": {"200": {"description": "OK"}}
+                    }
+                }
+            }
+        }
+        file_path = tmp_path / "openapi_tags.json"
+        file_path.write_text(json.dumps(spec_content))
+
+        parser = OpenAPIParser(file_path)
+        public_eps = parser.get_endpoints(tags=["public"])
+
+        assert len(public_eps) == 1
+        assert public_eps[0]["operationId"] == "getPublic"
+
     def test_get_servers_openapi_3(self, openapi_3_spec):
         """Test server extraction for OpenAPI 3."""
         parser = OpenAPIParser(openapi_3_spec)
         servers = parser.get_servers()
         assert "https://api.example.com/v1" in servers
+
+    def test_get_servers_openapi_3_with_variables(self, tmp_path):
+        """Test server variable substitution for OpenAPI 3."""
+        spec_content = {
+            "openapi": "3.0.0",
+            "info": {"title": "Server Vars API", "version": "1.0.0"},
+            "servers": [
+                {
+                    "url": "https://{environment}.example.com",
+                    "variables": {
+                        "environment": {"default": "api"}
+                    }
+                }
+            ],
+            "paths": {
+                "/health": {
+                    "get": {
+                        "operationId": "getHealth",
+                        "responses": {"200": {"description": "OK"}}
+                    }
+                }
+            }
+        }
+        file_path = tmp_path / "openapi_servers.json"
+        file_path.write_text(json.dumps(spec_content))
+
+        parser = OpenAPIParser(file_path)
+        servers = parser.get_servers()
+        assert servers == ["https://api.example.com"]
 
     def test_get_servers_swagger_2(self, swagger_2_spec):
         """Test server extraction for Swagger 2."""
@@ -265,7 +359,7 @@ class TestOpenAPIParser:
             return
             
         parser = OpenAPIParser(real_world_spec_path)
-        spec = parser.parse()
+        parser.parse()
         endpoints = parser.get_endpoints()
         
         assert len(endpoints) > 0

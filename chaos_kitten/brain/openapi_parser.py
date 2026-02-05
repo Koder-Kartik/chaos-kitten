@@ -30,9 +30,8 @@ Examples:
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 from prance import ResolvingParser
-from prance.util import fs as prance_fs
 
 logger = logging.getLogger(__name__)
 
@@ -44,18 +43,18 @@ class OpenAPIParser:
     in JSON and YAML formats.
     """
     
-    def __init__(self, spec_path: Union[str, Path]) -> None:
+    def __init__(self, spec_path: str | Path) -> None:
         """Initialize the parser.
         
         Args:
             spec_path (Union[str, Path]): Path to the OpenAPI spec file (JSON or YAML).
         """
         self.spec_path = Path(spec_path)
-        self.spec: Dict[str, Any] = {}
-        self.version: Optional[str] = None
-        self._endpoints: List[Dict[str, Any]] = []
+        self.spec: dict[str, Any] = {}
+        self.version: str | None = None
+        self._endpoints: list[dict[str, Any]] = []
     
-    def parse(self) -> Dict[str, Any]:
+    def parse(self) -> dict[str, Any]:
         """Parse the OpenAPI specification.
         
         Loads the specification file, validates it against the schema, and 
@@ -78,7 +77,7 @@ class OpenAPIParser:
         
         try:
             # ResolvingParser handles load, parse, validate, and ref resolution
-            # We use strict=False to allow some flexibility, but validation runs by default
+            # Use default strict behavior; validation runs by default
             parser = ResolvingParser(
                 str(self.spec_path),
                 backend='openapi-spec-validator'
@@ -114,22 +113,6 @@ class OpenAPIParser:
             logger.error(f"Failed to parse OpenAPI spec: {e}")
             raise ValueError(f"Failed to parse OpenAPI spec: {e}") from e
 
-    def _validate_spec(self) -> bool:
-        """Validate specification against generic OpenAPI schema.
-        
-        Note: Prance performs validation during initialization by default.
-        This method serves as an explicit check or hook for additional rules.
-        
-        Returns:
-            bool: True if valid, False otherwise (though typically raises exception).
-        """
-        if not self.spec:
-            try:
-                self.parse()
-            except ValueError:
-                return False
-        return True
-
     def _parse_openapi_3x(self) -> None:
         """Extract endpoints from OpenAPI 3.x paths."""
         paths = self.spec.get('paths', {})
@@ -140,7 +123,7 @@ class OpenAPIParser:
         paths = self.spec.get('paths', {})
         self._endpoints = self._extract_endpoints(paths)
 
-    def _extract_endpoints(self, paths: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _extract_endpoints(self, paths: dict[str, Any]) -> list[dict[str, Any]]:
         """Extract and normalize endpoints from paths object.
         
         Args:
@@ -162,11 +145,20 @@ class OpenAPIParser:
                     continue
                 
                 # Merge path-level and operation-level parameters
+                # Operation-level params override path-level by (name, in)
                 op_params = operation.get('parameters', [])
-                all_params = path_params + op_params
+                merged_params = {}
+                for param in path_params:
+                    key = (param.get('name'), param.get('in'))
+                    merged_params[key] = param
+                for param in op_params:
+                    key = (param.get('name'), param.get('in'))
+                    merged_params[key] = param
+                all_params = list(merged_params.values())
                 
                 # Normalize parameters
-                normalized_params, request_body = self._normalize_parameters(all_params)
+                consumes = operation.get('consumes', self.spec.get('consumes', []))
+                normalized_params, request_body = self._normalize_parameters(all_params, consumes)
                 
                 # If explicitly defined requestBody (OpenAPI 3), use it
                 if 'requestBody' in operation:
@@ -181,7 +173,7 @@ class OpenAPIParser:
                     "parameters": normalized_params,
                     "tags": operation.get('tags', []),
                     "responses": operation.get('responses', {}),
-                    "security": operation.get('security', []),
+                    "security": operation.get('security', self.spec.get('security', [])),
                     "requestBody": request_body
                 }
                 
@@ -189,11 +181,16 @@ class OpenAPIParser:
                 
         return endpoints
 
-    def _normalize_parameters(self, parameters: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    def _normalize_parameters(
+        self,
+        parameters: list[dict[str, Any]],
+        consumes: list[str] | None = None
+    ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
         """Normalize parameters and extract body for Swagger 2.0 backward compatibility.
         
         Args:
             parameters (List[Dict[str, Any]]): List of parameter definitions.
+            consumes (List[str] | None): Swagger 2.0 consumes list for media type selection.
             
         Returns:
             Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]: 
@@ -223,9 +220,15 @@ class OpenAPIParser:
                 # Note: This is a simplification; handling multiple formData params requires
                 # merging them into one schema properties object.
                 if request_body is None:
+                    media_type = "application/x-www-form-urlencoded"
+                    if consumes:
+                        if "multipart/form-data" in consumes:
+                            media_type = "multipart/form-data"
+                        elif "application/x-www-form-urlencoded" in consumes:
+                            media_type = "application/x-www-form-urlencoded"
                     request_body = {
                         "content": {
-                            "application/x-www-form-urlencoded": {
+                            media_type: {
                                 "schema": {
                                     "type": "object",
                                     "properties": {},
@@ -260,7 +263,7 @@ class OpenAPIParser:
                 
         return normalized, request_body
 
-    def get_endpoints(self, tags: Optional[List[str]] = None, methods: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    def get_endpoints(self, tags: list[str] | None = None, methods: list[str] | None = None) -> list[dict[str, Any]]:
         """Extract all API endpoints from the spec with optional filtering.
         
         Args:
@@ -274,7 +277,7 @@ class OpenAPIParser:
         if not self.spec:
             self.parse()
             
-        endpoints = self._endpoints
+        endpoints = list(self._endpoints)
         
         if tags:
             tags_lower = {t.lower() for t in tags}
@@ -292,7 +295,7 @@ class OpenAPIParser:
             
         return endpoints
 
-    def get_servers(self) -> List[str]:
+    def get_servers(self) -> list[str]:
         """Extract server URLs from the specification.
 
         Handles both OpenAPI 3.x `servers` array (with variable substitution)
@@ -336,7 +339,7 @@ class OpenAPIParser:
         
         return servers
 
-    def get_security_schemes(self) -> Dict[str, Any]:
+    def get_security_schemes(self) -> dict[str, Any]:
         """Extract and normalize security schemes from the spec.
         
         Extracts schemes from OpenAPI 3.x `components.securitySchemes` or 
