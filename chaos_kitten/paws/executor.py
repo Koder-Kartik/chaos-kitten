@@ -96,7 +96,7 @@ class Executor:
         # Merge headers
         # Start timing
         for attempt in range(max_retries + 1):
-            start_time = time.time()
+            start_time = time.monotonic()
             
             try:
                 # Handle different payload types based on method usually, 
@@ -113,7 +113,7 @@ class Executor:
                         kwargs["params"] = payload
                     
                 response = await self._client.request(method, url, **kwargs)
-                elapsed_ms =  int((time.time() - start_time) * 1000)
+                elapsed_ms =  int((time.monotonic() - start_time) * 1000)
                 
                 return {
                     "status_code": response.status_code,
@@ -124,7 +124,7 @@ class Executor:
                 }
                 
             except httpx.RequestError as e:
-                elapsed_ms = int((time.time() - start_time) * 1000)
+                elapsed_ms = int((time.monotonic() - start_time) * 1000)
                 if attempt == max_retries:
                     return {
                         "status_code": 0,
