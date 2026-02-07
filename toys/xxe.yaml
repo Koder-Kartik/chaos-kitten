@@ -239,9 +239,18 @@ remediation: |
      ```
   
      ```php
-     // PHP
-     libxml_disable_entity_loader(true);
-     $xml = simplexml_load_string($input, 'SimpleXMLElement', LIBXML_NOENT | LIBXML_NONET);
+     // PHP (PHP 8.0+: external entities disabled by default)
+     // For PHP < 8.0, guard the deprecated function
+     if (PHP_VERSION_ID < 80000 && function_exists('libxml_disable_entity_loader')) {
+         libxml_disable_entity_loader(true);
+     }
+     
+     // Use LIBXML_NONET only - blocks network fetches
+     // Do NOT use LIBXML_NOENT as it ENABLES entity substitution (unsafe!)
+     $xml = simplexml_load_string($input, 'SimpleXMLElement', LIBXML_NONET);
+     
+     // For stricter protection, also disable DTD loading
+     $xml = simplexml_load_string($input, 'SimpleXMLElement', LIBXML_NONET | LIBXML_DTDLOAD);
      ```
   
      ```csharp
