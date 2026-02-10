@@ -15,7 +15,7 @@ If you're new to the repo, skim the README first. For deeper dives, start with:
 - [Local development setup](#local-development-setup)
 - [Project structure walkthrough](#project-structure-walkthrough)
 - [CLI usage](#cli-usage)
-- [API usage](#api-usage)
+- [Library usage (internal API)](#library-usage-internal-api)
 - [Adding new attack profiles (YAML)](#adding-new-attack-profiles-yaml)
 - [Adding payloads to `naughty_strings.json`](#adding-payloads-to-naughty_stringsjson)
 - [LLM debugging tips](#llm-debugging-tips)
@@ -103,6 +103,8 @@ pytest
 
 ## Project structure walkthrough
 
+The paths below match the current source tree. If something looks different in your checkout, trust the repo and use the file browser or `rg` to find the latest location.
+
 ### `chaos_kitten/` (library + CLI)
 
 - `chaos_kitten/cli.py`
@@ -177,9 +179,11 @@ Report formats currently supported by the reporter are:
 
 For the full contributor workflow (formatting, linting, type-checking, tests), see [Code style and testing expectations](#code-style-and-testing-expectations).
 
-## API usage
+## Library usage (internal API)
 
 Chaos Kitten is importable as a Python library. The most direct entrypoint today is the Brain `Orchestrator`.
+
+Note: This is an internal API example intended for advanced usage. Breaking changes may occur between releases. For stable behavior, prefer the CLI (`chaos-kitten scan`).
 
 ```python
 import asyncio
@@ -271,7 +275,7 @@ remediation: |
 
 ### How profiles are used in code
 
-Currently, profiles are not auto-loaded from `toys/` during a scan. Adding a YAML file is the first step, but wiring it into planning/analysis is still manual.
+As of v0.1.0, profiles are not auto-loaded from `toys/` during a scan. Adding a YAML file is the first step, but wiring it into planning/analysis is still manual. Check `chaos_kitten/brain/attack_planner.py` for the latest behavior.
 
 The long-term intention is for `chaos_kitten/brain/attack_planner.py` to:
 
@@ -368,6 +372,8 @@ Tooling is configured in `pyproject.toml`:
 - Ruff (`[tool.ruff]`) for linting
 - Mypy (`[tool.mypy]`) for type checking
 
+For the authoritative contributor checklist (and any future pre-commit/CI-only steps), see [`CONTRIBUTING.md`](../CONTRIBUTING.md) and [`docs/contributing_guide.md`](./contributing_guide.md).
+
 Recommended local commands:
 
 ```bash
@@ -429,9 +435,11 @@ Try:
 python -c 'from chaos_kitten.brain.openapi_parser import OpenAPIParser; p=OpenAPIParser("examples/sample_openapi.json"); p.parse(); print(len(p.get_endpoints()))'
 ```
 
+Note: Internal module paths like `chaos_kitten.brain.openapi_parser` may change between versions. If this import fails, use your IDE or `rg OpenAPIParser` to find the current module.
+
 ### Report generation errors
 
-If you see template-related errors, confirm the templates exist at:
+If you see template-related errors, confirm the templates exist (by default under):
 
 - `chaos_kitten/litterbox/templates/report.html`
 - `chaos_kitten/litterbox/templates/report.md`
