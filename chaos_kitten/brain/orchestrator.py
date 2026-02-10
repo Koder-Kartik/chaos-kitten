@@ -114,6 +114,11 @@ class Orchestrator:
         
         api_config = self.config.get("api")
         spec_path = (api_config.get("spec_path") if isinstance(api_config, dict) else None) or self.config.get("spec")
+        spec_path = (
+            (api_config.get("spec_path") if isinstance(api_config, dict) else None)
+            or self.config.get("spec")
+            or (target_config.get("openapi_spec") if isinstance(target_config, dict) else None)
+        )
         target_config = self.config.get("target")
         target_url = (target_config.get("base_url") if isinstance(target_config, dict) else target_config) or None
 
