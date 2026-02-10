@@ -5,6 +5,8 @@ import logging
 import time
 from typing import Any, Dict, Optional, Union
 import httpx
+import asyncio
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +34,19 @@ class Executor:
         
         Args:
             base_url: Base URL of the target API
-            auth_type: Authentication type (bearer, basic, oauth, none)
+            auth_type: Authentication type (bearer, basic, none)
             auth_token: Authentication token/credentials
             rate_limit: Maximum requests per second
             timeout: Request timeout in seconds
+        
+        Raises:
+            ValueError: If auth_type is not supported.
         """
         self.base_url = base_url.rstrip("/")
+        
+        if auth_type not in ["bearer", "basic", "none"]:
+            raise ValueError(f"Unsupported auth_type: {auth_type}. Supported types: bearer, basic, none")
+            
         self.auth_type = auth_type
         self.auth_token = auth_token
         self.rate_limit = rate_limit
@@ -66,7 +75,7 @@ class Executor:
         """Build request headers including authentication."""
         headers = {"User-Agent": "ChaosKitten/0.1.0"}
         
-        if self.auth_type == "bearer" and self.auth_token:
+        if self.auth_type in ("bearer", "oauth") and self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
         elif self.auth_type == "basic" and self.auth_token:
             headers["Authorization"] = f"Basic {self.auth_token}"
