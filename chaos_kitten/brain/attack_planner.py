@@ -53,7 +53,7 @@ class AttackPlanner:
     - Adapt based on responses
     """
     
-    def __init__(self, endpoints: list[dict[str, Any]], toys_path: str = "toys/",llm_provider: str = "anthropic",model: str = "claude-3-5-sonnet-20241022",temperature: float = 0.7) -> None:
+    def __init__(self, endpoints: list[dict[str, Any]], toys_path: str = "toys/",llm_provider: str = "anthropic",temperature: float = 0.7) -> None:
         """Initialize the attack planner.
         
         Args:
@@ -65,7 +65,6 @@ class AttackPlanner:
         self.attack_profiles: list[dict[str, Any]] = []
 
         self.llm_provider=llm_provider.lower()
-        self.model=model
         self.temperature=temperature
         self.llm=self._init_llm()
 
@@ -73,7 +72,7 @@ class AttackPlanner:
         if self.llm_provider=='anthropic':
             return ChatAnthropic(model="claude-3-5-sonnet-20241022",temperature=self.temperature)
         elif self.llm_provider=='openai':
-            return ChatOpenAI(model="gpt-5",temperature=self.temperature)
+            return ChatOpenAI(model="gpt-5.2",temperature=self.temperature)
         elif self.llm_provider == "ollama":
             return ChatOllama(model="llama3.1", temperature=self.temperature)
         else:
