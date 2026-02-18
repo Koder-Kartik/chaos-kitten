@@ -46,6 +46,8 @@ class ChaosREPL:
                     
                 await self.handle_command(command_str)
                 
+            except EOFError:
+                break
             except KeyboardInterrupt:
                 self.console.print("\n[yellow]Type 'exit' to quit.[/yellow]")
             except Exception as e:
