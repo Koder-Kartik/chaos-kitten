@@ -32,8 +32,8 @@ payloads:
   #Weak TLS/SSL Protocols
   - "SSLv2"
   - "SSLv3"
-  - "TLSv1.0"
-  - "TLSv1.1"
+  - "TLSv1\.0"
+  - "TLSv1\.1"
   - "verify=False"
   #Random Number Generation
   - "Math.random()"
@@ -49,13 +49,13 @@ success_indicators:
   response_contains:
     - "Content-MD5"
     - "verify=False"
-    - "alg: none"
+    - "\"alg\": \"none\""
     - "BEGIN RSA PRIVATE KEY"
     - "MD5"
     - "SHA1"
     - "SSLv"
-    - "TLSv1.0"
-    - "TLSv1.1"
+    - "TLSv1\.0"
+    - "TLSv1\.1"
     - "DES"
     - "ECB"
   status_codes:
