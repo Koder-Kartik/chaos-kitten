@@ -1,4 +1,4 @@
-"""Tests for the Reconnaisance Engine."""
+"""Tests for the Reconnaissance Engine."""
 
 import sys
 from unittest.mock import MagicMock
