@@ -95,6 +95,7 @@ class TestReconEngine(unittest.TestCase):
         mock_response.text = '<html><body>Content="WordPress"</body></html>'
         cookie = MagicMock()
         cookie.name = "PHPSESSID"
+        # Ensure name attribute is set on mock object
         mock_response.cookies = [cookie]
         
         mock_client.get.return_value = mock_response

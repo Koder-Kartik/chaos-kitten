@@ -46,6 +46,7 @@ class AgentState(TypedDict):
 
 
 async def run_recon(state: AgentState, app_config: Dict[str, Any]) -> Dict[str, Any]:
+    # Renamed to app_config to avoid LangGraph collision
     console.print("[bold blue]🔍 Starting Reconnaissance Phase...[/bold blue]")
     try:
         engine = ReconEngine(app_config)
