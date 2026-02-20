@@ -106,11 +106,11 @@ payloads:
 
   # --- Weak Secret 'secret' (HMAC) ---
   # Signed with 'secret' using HS256
-  - "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6ImFkbWluIiwiYWRtaW4iOnRydWV9.2MJ5w0KjJ9gD6z_w3l7y6_uR2K5u2K6u2K5u2K5u2K4"
+  - "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6ImFkbWluIiwiYWRtaW4iOnRydWV9.44lJS0jlltzcglq7vgjXMXYRTecBxseN3Dec_LO_osI"
 
   # --- Weak Secret 'password' (HMAC) ---
   # Signed with 'password' using HS256
-  - "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6ImFkbWluIiwiYWRtaW4iOnRydWV9.5G4H3K2J1L0M9N8B7V6C5X4Z3"
+  - "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6ImFkbWluIiwiYWRtaW4iOnRydWV9.Bf6e1oNQgkVHyrVYydTp0Z13O0GbSO890XKW41KSd8E"
 
 remediation: |
   # Secure JWT Implementation Guidelines
@@ -138,6 +138,7 @@ remediation: |
   # PyJWT Example (Secure)
 
   import jwt
+  import logging
   from jwt.exceptions import InvalidTokenError
 
   def verify_token(token, public_key):
@@ -159,7 +160,7 @@ remediation: |
           return payload
       except InvalidTokenError as e:
           # Log error and return generic unauthorized message
-          print(f"Token validation failed: {str(e)}")
+          logging.error(f"Token validation failed: {str(e)}")
           return None
 
 references:
