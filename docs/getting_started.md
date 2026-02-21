@@ -178,7 +178,7 @@ chaos-kitten diff \
 - name: Upload SARIF to GitHub Security
   uses: github/codeql-action/upload-sarif@v2
   with:
-    sarif_file: ./security-reports/chaos-kitten.sarif
+    sarif_file: ./security-reports/results.sarif
 ```
 
 ### When to Use Diff Mode
