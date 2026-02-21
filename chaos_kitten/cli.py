@@ -267,6 +267,12 @@ def diff(
         "--fail-on-critical",
         help="Exit with code 1 if critical vulnerabilities found",
     ),
+    provider: str = typer.Option(
+        None,
+        "--provider",
+        "-p",
+        help="LLM provider (openai, anthropic, ollama)",
+    ),
 ):
     """API Spec Diff Scanning - Test only what changed between API versions."""
     console.print(Panel(ASCII_CAT, title="🐱 Chaos Kitten - Diff Mode", border_style="magenta"))
@@ -349,6 +355,30 @@ def diff(
         console.print("[bold green]✅ No changes detected! API is identical.[/bold green]")
         return
 
+    # When only critical findings exist (no endpoints to test), skip orchestrator and report directly
+    if endpoints_to_test_display == 0 and critical_findings:
+        console.print()
+        console.print("[bold yellow]ℹ️  No changed endpoints to test — reporting critical findings only[/bold yellow]")
+        
+        from chaos_kitten.litterbox.reporter import Reporter
+        reporter = Reporter(
+            output_path=output,
+            output_format=format,
+        )
+        
+        report_path = reporter.generate_report(
+            vulnerabilities=critical_findings,
+            target_url=target or "N/A",
+        )
+        
+        console.print(f"[bold green]✅ Report saved:[/bold green] {report_path}")
+        
+        if fail_on_critical:
+            console.print(f"[bold red]❌ Found {len(critical_findings)} critical issue(s). Failing pipeline.[/bold red]")
+            raise typer.Exit(code=1)
+        
+        return
+    
     # Check for target URL
     if not target and endpoints_to_test_display > 0:
         console.print()
@@ -357,36 +387,61 @@ def diff(
         raise typer.Exit(code=1)
 
     # Prepare config for orchestrator
-    app_config = {
-        "target": {
-            "base_url": target,
-            # In normal mode, this path is parsed by the orchestrator/OpenAPI parser.
-            # In diff mode, endpoints are provided via diff_mode['delta_endpoints'],
-            # so this is only used as a reference/logging handle to the *new* spec.
-            "openapi_spec": new,
-        },
-        "agent": {
-            "llm_provider": "anthropic",
-            "model": "claude-3-5-sonnet-20241022",
-            "temperature": 0.7,
-            "max_iterations": 10,
-        },
-        "executor": {
-            "concurrent_requests": 5,
-            "timeout": 30,
-        },
-        "output": {
-            "path": output,
-            "format": format,
-            "include_poc": True,
-            "include_remediation": True,
-        },
-        # Diff mode specific
-        "diff_mode": {
-            "enabled": not full,
-            "delta_endpoints": differ.get_delta_endpoints() if not full else None,
-            "critical_findings": critical_findings,
-        }
+    # Try to load from chaos-kitten.yaml if it exists
+    app_config = {}
+    from chaos_kitten.utils.config import Config
+    import os
+    
+    config_path = "chaos-kitten.yaml"
+    if os.path.exists(config_path):
+        config_loader = Config(config_path)
+        try:
+            app_config = config_loader.load()
+        except Exception:
+            pass  # Fall back to defaults if config load fails
+    
+    # Override/set required fields
+    if "target" not in app_config:
+        app_config["target"] = {}
+    app_config["target"]["base_url"] = target
+    app_config["target"]["openapi_spec"] = new
+    
+    if "agent" not in app_config:
+        app_config["agent"] = {}
+    # Use provider flag or fall back to config or default
+    if provider:
+        app_config["agent"]["llm_provider"] = provider
+    elif "llm_provider" not in app_config["agent"]:
+        app_config["agent"]["llm_provider"] = "anthropic"
+    
+    # Set model defaults if not in config
+    if "model" not in app_config["agent"]:
+        app_config["agent"]["model"] = "claude-3-5-sonnet-20241022"
+    if "temperature" not in app_config["agent"]:
+        app_config["agent"]["temperature"] = 0.7
+    if "max_iterations" not in app_config["agent"]:
+        app_config["agent"]["max_iterations"] = 10
+    
+    if "executor" not in app_config:
+        app_config["executor"] = {}
+    if "concurrent_requests" not in app_config["executor"]:
+        app_config["executor"]["concurrent_requests"] = 5
+    if "timeout" not in app_config["executor"]:
+        app_config["executor"]["timeout"] = 30
+    
+    # Use reporting key to match orchestrator expectations
+    if "reporting" not in app_config:
+        app_config["reporting"] = {}
+    app_config["reporting"]["output_path"] = output
+    app_config["reporting"]["format"] = format
+    app_config["reporting"]["include_poc"] = True
+    app_config["reporting"]["include_remediation"] = True
+    
+    # Diff mode specific
+    app_config["diff_mode"] = {
+        "enabled": not full,
+        "delta_endpoints": differ.get_delta_endpoints() if not full else None,
+        "critical_findings": critical_findings,
     }
 
     # Run orchestrator with diff mode

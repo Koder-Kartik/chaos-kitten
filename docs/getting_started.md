@@ -125,7 +125,7 @@ chaos-kitten diff \
 
 ### Example Output
 
-```
+```text
 📊 Computing API diff...
 
 ╭─ API Spec Diff ─────────────────────────────────╮
@@ -137,14 +137,14 @@ chaos-kitten diff \
 │ ➕ Added endpoints:  3                          │
 │ ➖ Removed endpoints: 1                         │
 │ 🔄 Modified endpoints: 4                        │
-│ ✓ Unchanged endpoints: 47                       │
+│ ✓ Unchanged endpoints: 45                       │
 ╰─────────────────────────────────────────────────╯
 
 🚨 1 CRITICAL security regression(s) detected!
   • DELETE /api/admin/users: Authentication requirement removed — potential security regression
     - 🚨 CRITICAL: Authentication requirement removed
 
-✓ Delta mode: Testing 7 changed endpoints, skipping 47 unchanged
+✓ Delta mode: Testing 7 changed endpoints, skipping 45 unchanged
 🎯 Starting security scan on changed endpoints...
 ```
 
