@@ -142,19 +142,12 @@ def plan_attacks(state: AgentState) -> Dict[str, Any]:
     # For now, we trust the LLM to deduce context from the endpoint itself.
     
     planner = AttackPlanner([endpoint])
-    all_attacks = planner.plan_attacks(endpoint)
     
-    # Apply NL profile filter if available
+    # Extract NL-selected profiles if available
     nl_plan = state.get("nl_plan") or {}
-    suggested_profiles = nl_plan.get("profiles") or []
+    nl_profiles = (state.get("nl_plan") or {}).get("profiles")
     
-    if suggested_profiles:
-        all_attacks = [
-            a for a in all_attacks 
-            if a.get("profile_name") in suggested_profiles
-        ]
-    
-    return {"planned_attacks": all_attacks}
+    return {"planned_attacks": planner.plan_attacks(endpoint, allowed_profiles=nl_profiles)}
 
 
 async def execute_and_analyze(

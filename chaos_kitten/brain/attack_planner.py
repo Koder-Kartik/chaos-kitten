@@ -171,8 +171,16 @@ class AttackPlanner:
 
         logger.info("Loaded %d attack profiles", len(self.attack_profiles))
 
-    def plan_attacks(self, endpoint: dict[str, Any]) -> list[dict[str, Any]]:
-        """Plan attacks for a specific endpoint."""
+    def plan_attacks(self, endpoint: dict[str, Any], allowed_profiles: list[str] | None = None) -> list[dict[str, Any]]:
+        """Plan attacks for a specific endpoint.
+        
+        Args:
+            endpoint: The API endpoint to plan attacks for
+            allowed_profiles: Optional list of profile names to filter attacks by
+        
+        Returns:
+            List of planned attack dictionaries
+        """
         path = endpoint.get("path", "")
         method = endpoint.get("method", "GET")
         params = endpoint.get("parameters", [])
@@ -218,6 +226,14 @@ class AttackPlanner:
             attacks = self._plan_rule_based(endpoint)
 
         self._cache[cache_key] = attacks
+        
+        # Filter by allowed profiles if specified
+        if allowed_profiles:
+            attacks = [
+                a for a in attacks
+                if a.get("profile_name") in allowed_profiles
+            ]
+        
         return attacks
 
     def _normalize_llm_attacks(
@@ -741,8 +757,11 @@ class NaturalLanguagePlanner:
                 logger.info(f"[GOAL] LLM selected {len(result['endpoints'])} relevant endpoints")
                 for ep in result.get("endpoints", [])[:3]:  # Log top 3
                     score = ep.get('relevance_score', 0)
-                    # Convert to float if LLM returned string
-                    score_val = float(score) if isinstance(score, (str, int, float)) else 0
+                    # Convert to float safely
+                    try:
+                        score_val = float(score)
+                    except (TypeError, ValueError):
+                        score_val = 0.0
                     logger.info(
                         f"[GOAL]   - {ep.get('method')} {ep.get('path')} "
                         f"(score: {score_val:.2f})"
