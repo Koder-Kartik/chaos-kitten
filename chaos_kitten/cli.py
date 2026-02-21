@@ -355,36 +355,21 @@ def diff(
         console.print("[bold green]✅ No changes detected! API is identical.[/bold green]")
         return
 
-    # When only critical findings exist (no endpoints to test), skip orchestrator and report directly
-    if endpoints_to_test_display == 0 and critical_findings:
-        console.print()
-        console.print("[bold yellow]ℹ️  No changed endpoints to test — reporting critical findings only[/bold yellow]")
-        
-        from chaos_kitten.litterbox.reporter import Reporter
-        reporter = Reporter(
-            output_path=output,
-            output_format=format,
-        )
-        
-        report_path = reporter.generate_report(
-            vulnerabilities=critical_findings,
-            target_url=target or "N/A",
-        )
-        
-        console.print(f"[bold green]✅ Report saved:[/bold green] {report_path}")
-        
-        if fail_on_critical:
-            console.print(f"[bold red]❌ Found {len(critical_findings)} critical issue(s). Failing pipeline.[/bold red]")
-            raise typer.Exit(code=1)
-        
-        return
-    
-    # Check for target URL
-    if not target and endpoints_to_test_display > 0:
+    # Check for target URL when we have endpoints to test
+    if endpoints_to_test_display > 0 and not target:
         console.print()
         console.print("[bold red]❌ Missing --base-url:[/bold red] Need target URL to test endpoints")
         console.print("[dim]Example: --base-url https://api.example.com[/dim]")
         raise typer.Exit(code=1)
+
+    # Only pre-scan critical findings exist (no endpoints to test) — exit without running orchestrator
+    if endpoints_to_test_display == 0:
+        console.print()
+        console.print("[bold yellow]ℹ️  No changed endpoints to test — critical findings already displayed above[/bold yellow]")
+        if fail_on_critical:
+            console.print(f"[bold red]❌ Found {len(critical_findings)} critical issue(s). Failing pipeline.[/bold red]")
+            raise typer.Exit(code=1)
+        return
 
     # Prepare config for orchestrator
     # Try to load from chaos-kitten.yaml if it exists
@@ -468,7 +453,8 @@ def diff(
                 v for v in vulnerabilities 
                 if str(v.get("severity", "")).lower() == "critical"
             ]
-            total_critical = len(critical_vulns) + len(critical_findings)
+            # Note: orchestrator already injected critical_findings into vulnerabilities, so no need to add again
+            total_critical = len(critical_vulns)
             
             if total_critical > 0:
                 console.print(f"[bold red]❌ Found {total_critical} critical issue(s). Failing pipeline.[/bold red]")

@@ -159,6 +159,14 @@ class SpecDiffer:
             for method in ["get", "post", "put", "patch", "delete", "options", "head", "trace"]:
                 if method in path_item:
                     operation = path_item[method]
+                    
+                    # Properly handle security inheritance (avoid or which treats [] as falsy)
+                    op_security = operation.get("security")
+                    if op_security is None:
+                        op_security = path_item.get("security")
+                    if op_security is None:
+                        op_security = spec.get("security", [])
+                    
                     endpoints.append({
                         "method": method.upper(),
                         "path": path,
@@ -166,7 +174,7 @@ class SpecDiffer:
                         "parameters": operation.get("parameters", []),
                         "requestBody": operation.get("requestBody"),
                         "responses": operation.get("responses", {}),
-                        "security": operation.get("security") or path_item.get("security") or spec.get("security", []),
+                        "security": op_security,
                         "summary": operation.get("summary", ""),
                         "description": operation.get("description", "")
                     })
