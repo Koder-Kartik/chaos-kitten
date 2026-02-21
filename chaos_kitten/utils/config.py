@@ -90,7 +90,10 @@ class Config:
     @property
     def agent(self) -> Dict[str, Any]:
         """Get agent configuration."""
-        return self._config.get("agent", {})
+        agent_config = self._config.get("agent", {})
+        if "max_concurrent_agents" not in agent_config:
+            agent_config["max_concurrent_agents"] = 3
+        return agent_config
     
     @property
     def executor(self) -> Dict[str, Any]:
