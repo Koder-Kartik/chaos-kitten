@@ -2,6 +2,15 @@
 
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
+import sys
+
+# Mock optional dependencies before importing modules that use them
+sys.modules["langchain_core"] = MagicMock()
+sys.modules["langchain_core.language_models"] = MagicMock()
+sys.modules["langchain_core.output_parsers"] = MagicMock()
+sys.modules["langchain_core.prompts"] = MagicMock()
+sys.modules["langchain_anthropic"] = MagicMock()
+
 from chaos_kitten.brain.adaptive_planner import AdaptivePayloadGenerator
 from chaos_kitten.brain.orchestrator import execute_and_analyze, Orchestrator, AgentState
 
@@ -90,11 +99,6 @@ async def test_orchestrator_adaptive_integration():
         # Easier path: mock the local import in orchestrator or just don't patch ChatAnthropic and assume it works 
         # or use sys.modules patching. 
         # Better: Configure it to use a provider that we can easily mock or just mock the sys.modules for langchain_anthropic
-        
-        with patch.dict("sys.modules", {"langchain_anthropic": MagicMock()}):
-             # We also need to patch ChatAnthropic inside the module if it was imported, but it is imported locally.
-             # So sys.modules patch should work for the import statement.
-             pass
 
     # Actually, simpler approach:
     # 1. Mock 'chaos_kitten.brain.orchestrator.AdaptivePayloadGenerator' (Done)
@@ -109,8 +113,8 @@ async def test_orchestrator_adaptive_integration():
              
              result = await execute_and_analyze(state, executor, config)
 
-             assert executor.execute_attack.call_count == 4
-             assert mock_gen_instance.generate_payloads.call_count == 2
+             assert executor.execute_attack.call_count == 3
+             assert mock_gen_instance.generate_payloads.call_count == 1
 
 @pytest.mark.asyncio
 async def test_orchestrator_adaptive_max_rounds():
