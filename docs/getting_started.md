@@ -21,7 +21,47 @@ pip install chaos-kitten
 ```bash
 git clone https://github.com/mdhaarishussain/chaos-kitten.git
 cd chaos-kitten
-pip install -e .
+pip install -e .        # Standard install (no browser)
+# Optional: browser exploit validation
+pip install -e .[browser]
+playwright install chromium
+```
+
+### Option 3: Docker (Recommended for Isolation)
+
+To run Chaos Kitten in a containerized environment (ensuring all dependencies, including browsers for XSS testing, are isolated):
+
+**Using Docker Compose (Easiest)**
+
+This spins up both the scanner and a vulnerable demo API:
+
+```bash
+# Set your API key environment variable first
+export ANTHROPIC_API_KEY=your_key_here
+# OR
+export OPENAI_API_KEY=your_key_here
+
+# Start the demo environment
+docker-compose up -d demo-api
+
+# Run a scan against the demo API
+docker-compose run chaos-kitten scan --demo
+```
+
+**Using Standalone Docker**
+
+Build the image:
+```bash
+docker build -t chaos-kitten .
+```
+
+Run a scan (mounting your current directory for config and reports):
+```bash
+docker run --rm \
+  -v $(pwd)/chaos-kitten.yaml:/app/chaos-kitten.yaml \
+  -v $(pwd)/reports:/app/reports \
+  -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+  chaos-kitten scan
 ```
 
 ## Quick Start
@@ -61,6 +101,22 @@ ANTHROPIC_API_KEY=your_key_here
 ```bash
 chaos-kitten scan
 ```
+
+## Advanced Configuration
+
+### Adaptive Payload Mutation
+
+For deeper testing, enable LLM-powered adaptive fuzzing. This allows Chaos Kitten to analyze probe responses and generate context-aware payloads on the fly.
+
+Add the following to your `chaos-kitten.yaml`:
+
+```yaml
+adaptive:
+  enabled: true
+  max_rounds: 3  # Max LLM calls per endpoint
+```
+
+When enabled, the scanner will use the LLM to mutate payloads based on server responses, potentially discovering vulnerabilities that static lists miss. Adaptive payloads are logged with `[ADAPTIVE]` in the report.
 
 ## Understanding Results
 

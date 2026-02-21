@@ -54,7 +54,7 @@ target:
   base_url: "http://localhost:3000"
   openapi_spec: "./openapi.json"
   auth:
-    type: "bearer"  # bearer, basic, oauth, none
+    type: "bearer"  # bearer, basic, none
     token: "${API_TOKEN}"
 
 agent:
@@ -133,6 +133,12 @@ def scan(
         "--fail-on-critical",
         help="Exit with code 1 if critical vulnerabilities found",
     ),
+    provider: str = typer.Option(
+        None,
+        "--provider",
+        "-p",
+        help="LLM provider (openai, anthropic, ollama)",
+    ),
     demo: bool = typer.Option(
         False,
         "--demo",
@@ -202,12 +208,35 @@ def scan(
         if "reporting" not in app_config: app_config["reporting"] = {}
         app_config["reporting"]["format"] = format
 
+    if provider:
+        if "agent" not in app_config: app_config["agent"] = {}
+        app_config["agent"]["llm_provider"] = provider
+
     # Run the orchestrator
     from chaos_kitten.brain.orchestrator import Orchestrator
     orchestrator = Orchestrator(app_config)
     try:
         import asyncio
-        asyncio.run(orchestrator.run())
+        results = asyncio.run(orchestrator.run())
+
+        # Check for orchestrator runtime errors
+        if isinstance(results, dict) and results.get("status") == "failed":
+            console.print(f"[bold red]❌ Scan failed:[/bold red] {results.get('error')}")
+            raise typer.Exit(code=1)
+
+        # Handle --fail-on-critical
+        if fail_on_critical:
+            vulnerabilities = results.get("vulnerabilities", [])
+            critical_vulns = [
+                v for v in vulnerabilities 
+                if str(v.get("severity", "")).lower() == "critical"
+            ]
+            if critical_vulns:
+                console.print(f"[bold red]❌ Found {len(critical_vulns)} critical vulnerabilities. Failing pipeline.[/bold red]")
+                raise typer.Exit(code=1)
+
+    except typer.Exit:
+        raise
     except Exception as e:
         console.print(f"[bold red]❌ Scan failed:[/bold red] {e}")
         # import traceback
@@ -215,11 +244,75 @@ def scan(
         raise typer.Exit(code=1)
 
 @app.command()
+def interactive():
+    """Start interactive mode."""
+    from chaos_kitten.console.repl import ChaosREPL
+    import asyncio
+    
+    repl = ChaosREPL(console)
+    asyncio.run(repl.start())
+
+@app.command()
 def meow():
     """🐱 Meow!"""
     console.print(Panel(ASCII_CAT, title="🐱 Meow!", border_style="magenta"))
     console.print("[italic]I'm going to knock some vulnerabilities off your API table![/italic]")
 
+
+@app.command()
+def validate_profiles(
+    path: str = typer.Option(
+        "toys",
+        "--path",
+        "-p",
+        help="Path to directory containing attack profiles",
+    )
+):
+    """Validate attack profiles for syntax and best practices."""
+    from chaos_kitten.validators import AttackProfileValidator
+    import os
+    
+    console.print(Panel(f"🔍 Validating profiles in [bold]{path}[/bold]...", title="Profile Validator", border_style="blue"))
+    
+    validator = AttackProfileValidator()
+    
+    if not os.path.exists(path):
+        console.print(f"[bold red]❌ Directory not found:[/bold red] {path}")
+        raise typer.Exit(code=1)
+        
+    results = validator.validate_all_profiles(path)
+    
+    if not results:
+        console.print("[yellow]⚠️  No profiles found.[/yellow]")
+        return
+
+    has_errors = False
+    
+    for filename, report in results.items():
+        if report.is_valid:
+            status = "[green]PASS[/green]"
+        else:
+            status = "[bold red]FAIL[/bold red]"
+            has_errors = True
+            
+        console.print(f"{status} [bold]{filename}[/bold]")
+        
+        for error in report.errors:
+            console.print(f"  ❌ {error}", style="red")
+            
+        for warning in report.warnings:
+            console.print(f"  ⚠️  {warning}", style="yellow")
+            
+        for suggestion in report.suggestions:
+            console.print(f"  💡 {suggestion}", style="blue")
+            
+        console.print()
+        
+    if has_errors:
+        console.print("[bold red]❌ Validation failed. Please fix key errors.[/bold red]")
+        raise typer.Exit(code=1)
+    else:
+        console.print("[bold green]✅ All profiles valid![/bold green]")
 
 if __name__ == "__main__":
     app()

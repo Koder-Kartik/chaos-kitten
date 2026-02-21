@@ -1,7 +1,7 @@
 """Security Report Generator."""
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 from datetime import datetime
 import json
 import logging
@@ -27,7 +27,7 @@ class Reporter:
 
     def __init__(
         self,
-        output_path: str | Path = "./reports",
+        output_path: Union[str, Path] = "./reports",
         output_format: str = "html",
         include_poc: bool = True,
         include_remediation: bool = True,
@@ -50,7 +50,7 @@ class Reporter:
 
     def generate(
         self,
-        scan_results: dict[str, Any],
+        scan_results: Dict[str, Any],
         target_url: str,
     ) -> Path:
         """Generate a security report.
@@ -322,7 +322,12 @@ class Reporter:
             {
                 "severity_class": severity_info["class"],
                 "severity_color": severity_info["color"],
-                "cat_message": f"🐱 I knocked this vase over! Found {severity} severity issue.",
+                "cat_message": (
+                    f"🐱 I found a shiny secret! {severity.title()} severity issue."
+                    if "Secret" in vuln.get("title", "") or "Key" in vuln.get("title", "")
+                    else
+                    f"🐱 I knocked this vase over! Found {severity} severity issue."
+                ),
                 "poc": vuln.get(
                     "proof_of_concept", ""
                 ),  # Map proof_of_concept to poc for template
@@ -331,7 +336,7 @@ class Reporter:
 
         return processed
 
-    def _generate_html(self, results: dict[str, Any], target: str) -> str:
+    def _generate_html(self, results: Dict[str, Any], target: str) -> str:
         """Generate HTML report using Jinja2 template.
 
         Args:
@@ -381,7 +386,7 @@ class Reporter:
         except TemplateError as e:
             raise TemplateError(f"HTML template rendering failed: {e}") from e
 
-    def _generate_markdown(self, results: dict[str, Any], target: str) -> str:
+    def _generate_markdown(self, results: Dict[str, Any], target: str) -> str:
         """Generate Markdown report using Jinja2 template.
 
         Args:
@@ -446,7 +451,7 @@ class Reporter:
         except TemplateError as e:
             raise TemplateError(f"Markdown template rendering failed: {e}") from e
 
-    def _generate_json(self, results: dict[str, Any], target: str) -> str:
+    def _generate_json(self, results: Dict[str, Any], target: str) -> str:
         """Generate JSON report.
 
         Args:
@@ -480,7 +485,7 @@ class Reporter:
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid vulnerability data for JSON export: {e}") from e
 
-    def _generate_sarif(self, results: dict[str, Any], target: str) -> str:
+    def _generate_sarif(self, results: Dict[str, Any], target: str) -> str:
         """Generate SARIF report.
 
         Args:
@@ -496,7 +501,7 @@ class Reporter:
         except Exception as e:
             raise ValueError(f"Failed to generate SARIF report: {e}") from e
 
-    def _generate_sarif_from_vulns(self, vulnerabilities: list[dict[str, Any]], target: str) -> str:
+    def _generate_sarif_from_vulns(self, vulnerabilities: List[Dict[str, Any]], target: str) -> str:
         """Generate SARIF report from validated vulnerabilities.
 
         Args:
@@ -520,12 +525,13 @@ class Reporter:
                     rules.append(
                         {
                             "id": vuln_type,
-                            "name": vuln.get("title", "Unknown Vulnerability"),
+                            "name": vuln.get("title", vuln_type),
                             "shortDescription": {
-                                "text": vuln.get("title", "Unknown Vulnerability")
+                                "text": vuln.get("title", vuln_type)
                             },
                             "fullDescription": {"text": vuln.get("description", "")},
                             "help": {"text": vuln.get("remediation", "")},
+                            "helpUri": "https://github.com/mdhaarishussain/chaos-kitten",
                             "defaultConfiguration": {
                                 "level": self._map_severity_to_sarif(
                                     vuln.get("severity", "medium")
@@ -553,17 +559,23 @@ class Reporter:
                                 }
                             }
                         ],
+                        "properties": {
+                            "payload": vuln.get("payload", ""),
+                            "proof_of_concept": vuln.get("proof_of_concept", ""),
+                            "remediation": vuln.get("remediation", ""),
+                            "evidence": vuln.get("evidence", "")
+                        }
                     }
                 )
 
             sarif_report = {
-                "$schema": "https://json.schemastore.org/sarif-2.1.0-rtm.5.json",
+                "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
                 "version": "2.1.0",
                 "runs": [
                     {
                         "tool": {
                             "driver": {
-                                "name": "Chaos Kitten",
+                                "name": "chaos-kitten",
                                 "version": "0.1.0",
                                 "rules": rules,
                             }
