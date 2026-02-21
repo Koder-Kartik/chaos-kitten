@@ -5,7 +5,7 @@ title = "chaos-kitten gitleaks config"
 
 # Allowlist for JWT attack payloads in toys/
 # These are intentional test payloads, not real secrets
-[[allowlist]]
+[allowlist]
 description = "JWT attack profile test payloads"
 paths = [
   '''toys/jwt_attacks\.yaml'''
