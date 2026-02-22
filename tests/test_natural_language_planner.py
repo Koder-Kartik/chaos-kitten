@@ -195,8 +195,8 @@ def test_natural_language_planner_load_profiles(mock_llm):
     # Should return a list of profile names
     assert isinstance(profiles, list)
     assert len(profiles) > 0
-    # Common profiles should be in the fallback list
-    assert "sql_injection_basic" in profiles or "idor_basic" in profiles
+    # Common profiles should be in the list (matches actual name: field in YAML)
+    assert "SQL Injection - Basic" in profiles or "SSRF" in profiles
 
 
 @patch("chaos_kitten.brain.attack_planner.ChatAnthropic")
