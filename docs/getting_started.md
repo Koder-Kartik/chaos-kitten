@@ -102,96 +102,26 @@ ANTHROPIC_API_KEY=your_key_here
 chaos-kitten scan
 ```
 
-## 5. API Spec Diff Scanning (CI/CD Integration)
+### 5. Use Natural Language Targeting (Optional)
 
-**Test only what changed between API versions** — perfect for continuous security in CI/CD pipelines.
+The `--goal` flag lets you describe what you want to test in plain English. Chaos Kitten's LLM will automatically select relevant endpoints and attack profiles based on your goal.
 
-### What is Diff Mode?
-
-Instead of rescanning your entire API on every deployment, diff mode:
-- Compares two OpenAPI specs (old version vs new version)
-- Identifies what changed (added endpoints, modified parameters, removed auth)
-- **Flags removed authentication as CRITICAL** immediately without testing
-- Tests only the delta endpoints, skipping unchanged ones
-
-### Usage
-
+**Example 1: Payment Security**
 ```bash
-chaos-kitten diff \
-  --old api_v1.json \
-  --new api_v2.json \
-  --base-url https://api.example.com
+chaos-kitten scan --goal "find all endpoints that handle money or payments and check if prices can be manipulated"
 ```
 
-### Example Output
-
-```text
-📊 Computing API diff...
-
-╭─ API Spec Diff ─────────────────────────────────╮
-│ Diff Summary:                                   │
-│                                                 │
-│ 📊 Total endpoints in old spec: 50              │
-│ 📊 Total endpoints in new spec: 52              │
-│                                                 │
-│ ➕ Added endpoints:  3                          │
-│ ➖ Removed endpoints: 1                         │
-│ 🔄 Modified endpoints: 4                        │
-│ ✓ Unchanged endpoints: 45                       │
-╰─────────────────────────────────────────────────╯
-
-🚨 1 CRITICAL security regression(s) detected!
-  • DELETE /api/admin/users: Authentication requirement removed — potential security regression
-    - 🚨 CRITICAL: Authentication requirement removed
-
-✓ Delta mode: Testing 7 changed endpoints, skipping 45 unchanged
-🎯 Starting security scan on changed endpoints...
+**Example 2: Access Control**
+```bash
+chaos-kitten scan --goal "I want to check if admin endpoints are accessible to regular users"
 ```
 
-### Options
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--old` | Path to old OpenAPI spec (required) | - |
-| `--new` | Path to new OpenAPI spec (required) | - |
-| `--base-url` | Base URL for the API | - |
-| `--full` | Override delta mode and test all endpoints | `false` |
-| `--fail-on-critical` | Exit with code 1 if critical issues found | `false` |
-| `--output` | Directory to save report | `./reports` |
-| `--format` | Report format (html, markdown, json, sarif) | `html` |
-
-### CI/CD Integration Example
-
-**GitHub Actions:**
-
-```yaml
-- name: API Security Regression Test
-  run: |
-    chaos-kitten diff \
-      --old ./specs/production_v1.json \
-      --new ./specs/staging_v2.json \
-      --base-url https://staging-api.example.com \
-      --fail-on-critical \
-      --format sarif \
-      --output ./security-reports
-      
-- name: Upload SARIF to GitHub Security
-  uses: github/codeql-action/upload-sarif@v2
-  with:
-    sarif_file: ./security-reports/results.sarif
+**Example 3: Authentication Testing**
+```bash
+chaos-kitten scan --goal "test the authentication system for account takeover risks"
 ```
 
-### When to Use Diff Mode
-
-✅ **Use diff mode when:**
-- Deploying a new API version in CI/CD
-- You want fast feedback (only test what changed)
-- Detecting security regressions is critical
-
-❌ **Use full scan when:**
-- First time scanning an API
-- Major refactoring or architecture changes
-- You want comprehensive coverage
+Without `--goal`, Chaos Kitten runs a full scan testing all endpoints. With `--goal`, the LLM prioritizes endpoints relevant to your security concern.
 
 ## Understanding Results
 
