@@ -102,21 +102,96 @@ ANTHROPIC_API_KEY=your_key_here
 chaos-kitten scan
 ```
 
-## Advanced Configuration
+## 5. API Spec Diff Scanning (CI/CD Integration)
 
-### Adaptive Payload Mutation
+**Test only what changed between API versions** — perfect for continuous security in CI/CD pipelines.
 
-For deeper testing, enable LLM-powered adaptive fuzzing. This allows Chaos Kitten to analyze probe responses and generate context-aware payloads on the fly.
+### What is Diff Mode?
 
-Add the following to your `chaos-kitten.yaml`:
+Instead of rescanning your entire API on every deployment, diff mode:
+- Compares two OpenAPI specs (old version vs new version)
+- Identifies what changed (added endpoints, modified parameters, removed auth)
+- **Flags removed authentication as CRITICAL** immediately without testing
+- Tests only the delta endpoints, skipping unchanged ones
 
-```yaml
-adaptive:
-  enabled: true
-  max_rounds: 3  # Max LLM calls per endpoint
+### Usage
+
+```bash
+chaos-kitten diff \
+  --old api_v1.json \
+  --new api_v2.json \
+  --base-url https://api.example.com
 ```
 
-When enabled, the scanner will use the LLM to mutate payloads based on server responses, potentially discovering vulnerabilities that static lists miss. Adaptive payloads are logged with `[ADAPTIVE]` in the report.
+### Example Output
+
+```text
+📊 Computing API diff...
+
+╭─ API Spec Diff ─────────────────────────────────╮
+│ Diff Summary:                                   │
+│                                                 │
+│ 📊 Total endpoints in old spec: 50              │
+│ 📊 Total endpoints in new spec: 52              │
+│                                                 │
+│ ➕ Added endpoints:  3                          │
+│ ➖ Removed endpoints: 1                         │
+│ 🔄 Modified endpoints: 4                        │
+│ ✓ Unchanged endpoints: 45                       │
+╰─────────────────────────────────────────────────╯
+
+🚨 1 CRITICAL security regression(s) detected!
+  • DELETE /api/admin/users: Authentication requirement removed — potential security regression
+    - 🚨 CRITICAL: Authentication requirement removed
+
+✓ Delta mode: Testing 7 changed endpoints, skipping 45 unchanged
+🎯 Starting security scan on changed endpoints...
+```
+
+### Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--old` | Path to old OpenAPI spec (required) | - |
+| `--new` | Path to new OpenAPI spec (required) | - |
+| `--base-url` | Base URL for the API | - |
+| `--full` | Override delta mode and test all endpoints | `false` |
+| `--fail-on-critical` | Exit with code 1 if critical issues found | `false` |
+| `--output` | Directory to save report | `./reports` |
+| `--format` | Report format (html, markdown, json, sarif) | `html` |
+
+### CI/CD Integration Example
+
+**GitHub Actions:**
+
+```yaml
+- name: API Security Regression Test
+  run: |
+    chaos-kitten diff \
+      --old ./specs/production_v1.json \
+      --new ./specs/staging_v2.json \
+      --base-url https://staging-api.example.com \
+      --fail-on-critical \
+      --format sarif \
+      --output ./security-reports
+      
+- name: Upload SARIF to GitHub Security
+  uses: github/codeql-action/upload-sarif@v2
+  with:
+    sarif_file: ./security-reports/results.sarif
+```
+
+### When to Use Diff Mode
+
+✅ **Use diff mode when:**
+- Deploying a new API version in CI/CD
+- You want fast feedback (only test what changed)
+- Detecting security regressions is critical
+
+❌ **Use full scan when:**
+- First time scanning an API
+- Major refactoring or architecture changes
+- You want comprehensive coverage
 
 ## Understanding Results
 
